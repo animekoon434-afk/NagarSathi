@@ -1,10 +1,16 @@
 import { verifyToken, createClerkClient } from '@clerk/backend';
 import User from '../models/User.js';
 
-// Create Clerk client for user operations
-const clerkClient = createClerkClient({
-    secretKey: process.env.CLERK_SECRET_KEY,
-});
+// Lazy initialization to handle ESM hoisting
+let clerkClientInstance;
+const getClerkClient = () => {
+    if (!clerkClientInstance) {
+        clerkClientInstance = createClerkClient({
+            secretKey: process.env.CLERK_SECRET_KEY,
+        });
+    }
+    return clerkClientInstance;
+};
 
 /**
  * Authentication Middleware using Clerk
@@ -39,13 +45,13 @@ export const requireAuth = async (req, res, next) => {
 
             const clerkUserId = verifiedToken.sub;
 
-            // Get the user from Clerk
-            const clerkUser = await clerkClient.users.getUser(clerkUserId);
-
-            // Find or create user in our database
-            let user = await User.findOne({ clerkUserId: clerkUser.id });
+            // Find user in our database first (Performance optimization & resilience)
+            let user = await User.findOne({ clerkUserId });
 
             if (!user) {
+                // Only call Clerk API if user doesn't exist locally
+                const clerkUser = await getClerkClient().users.getUser(clerkUserId);
+
                 // Create new user if they don't exist
                 user = await User.create({
                     clerkUserId: clerkUser.id,
@@ -102,10 +108,10 @@ export const optionalAuth = async (req, res, next) => {
 
             if (verifiedToken && verifiedToken.sub) {
                 const clerkUserId = verifiedToken.sub;
-                const clerkUser = await clerkClient.users.getUser(clerkUserId);
-                let user = await User.findOne({ clerkUserId: clerkUser.id });
+                let user = await User.findOne({ clerkUserId });
 
                 if (!user) {
+                    const clerkUser = await getClerkClient().users.getUser(clerkUserId);
                     user = await User.create({
                         clerkUserId: clerkUser.id,
                         email: clerkUser.emailAddresses[0]?.emailAddress || '',
@@ -115,7 +121,7 @@ export const optionalAuth = async (req, res, next) => {
                 }
 
                 req.auth = {
-                    userId: clerkUser.id,
+                    userId: clerkUserId,
                     sessionId: verifiedToken.sid,
                 };
                 req.user = user;
