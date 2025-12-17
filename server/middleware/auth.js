@@ -21,7 +21,8 @@ export const requireAuth = async (req, res, next) => {
         // Get the session token from the Authorization header
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+        if (!authHeader || !authHeader.startsWith('Bearer')) {
             return res.status(401).json({
                 success: false,
                 message: 'Authentication required. Please sign in.',
@@ -35,6 +36,7 @@ export const requireAuth = async (req, res, next) => {
             const verifiedToken = await verifyToken(token, {
                 secretKey: process.env.CLERK_SECRET_KEY,
             });
+
 
             if (!verifiedToken || !verifiedToken.sub) {
                 return res.status(401).json({
@@ -63,10 +65,11 @@ export const requireAuth = async (req, res, next) => {
 
             // Attach user info to request
             req.auth = {
-                userId: clerkUser.id,
+                userId: clerkUserId,
                 sessionId: verifiedToken.sid,
             };
             req.user = user;
+
 
             next();
         } catch (clerkError) {
