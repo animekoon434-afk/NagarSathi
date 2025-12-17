@@ -32,6 +32,8 @@ api.interceptors.request.use(
                 const token = await tokenProvider();
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
+                } else {
+                    console.warn('[API Debug] Token provider returned null');
                 }
             } catch (error) {
                 console.error('Error fetching token from provider:', error);
