@@ -39,7 +39,7 @@ const clerkAppearance = {
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <ClerkProvider publishableKey={clerkPubKey} appearance={clerkAppearance}>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <ThemeProvider>
                     <UserProvider>
                         <App />

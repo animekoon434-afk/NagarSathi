@@ -7,6 +7,7 @@ import {
     deleteIssue,
     getMyIssues,
     getIssuesForMap,
+    getFilterCounts,
 } from '../controllers/issueController.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { uploadIssueImages } from '../config/cloudinary.js';
@@ -21,6 +22,7 @@ const router = express.Router();
 // Public routes
 router.get('/', optionalAuth, getIssues);
 router.get('/map', getIssuesForMap);
+router.get('/filter-counts', getFilterCounts);
 router.get('/:id', optionalAuth, getIssueById);
 
 // Private routes

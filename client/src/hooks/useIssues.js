@@ -20,7 +20,12 @@ export const useIssues = (initialParams = {}) => {
             setLoading(true);
             setError(null);
 
-            const response = await issueApi.getIssues(params);
+            // Clean up params - remove empty strings and undefined values
+            const cleanParams = Object.fromEntries(
+                Object.entries(params).filter(([_, value]) => value !== '' && value !== undefined && value !== null)
+            );
+
+            const response = await issueApi.getIssues(cleanParams);
 
             setIssues(response.data.data);
             setPagination({

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, Settings, AlertTriangle } from 'lucide-react';
 import Navbar from '../components/common/Navbar';
 import IssueTable from '../components/admin/IssueTable';
 import AnalyticsWidgets from '../components/admin/AnalyticsWidgets';
@@ -8,6 +8,7 @@ import StatusUpdateModal from '../components/admin/StatusUpdateModal';
 import IssueFilters from '../components/issues/IssueFilters';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
+import Modal from '../components/common/Modal';
 import { useUserContext } from '../context/UserContext';
 import { adminApi } from '../services/api';
 import toast from 'react-hot-toast';
@@ -28,6 +29,13 @@ const AdminDashboard = () => {
     const [selectedIssue, setSelectedIssue] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [updating, setUpdating] = useState(false);
+
+    // Delete confirmation state
+    const [deleteConfirmation, setDeleteConfirmation] = useState({
+        open: false,
+        issueId: null
+    });
+    const [deleting, setDeleting] = useState(false);
 
     // Fetch issues
     const fetchIssues = async () => {
@@ -116,16 +124,24 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleDelete = async (issueId) => {
-        if (!window.confirm('Are you sure you want to delete this issue?')) return;
+    const handleDeleteClick = (issueId) => {
+        setDeleteConfirmation({ open: true, issueId });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmation.issueId) return;
 
         try {
-            await adminApi.deleteIssue(issueId);
+            setDeleting(true);
+            await adminApi.deleteIssue(deleteConfirmation.issueId);
             toast.success('Issue deleted');
             fetchIssues();
             fetchAnalytics();
+            setDeleteConfirmation({ open: false, issueId: null });
         } catch (error) {
             toast.error(error.message || 'Failed to delete issue');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -135,12 +151,12 @@ const AdminDashboard = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-dark-900">
+        <div className="h-screen bg-dark-900 flex flex-col overflow-hidden">
             <Navbar />
 
-            <main className="container-custom py-8">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <main className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 lg:px-8 py-6">
+                {/* Header - Fixed at top */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 flex-shrink-0">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
                             Admin Dashboard
@@ -155,15 +171,15 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 mb-6 border-b border-dark-700 pb-4">
+                {/* Tabs - Fixed */}
+                <div className="flex gap-2 mb-6 border-b border-dark-700 pb-4 flex-shrink-0">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-primary-600 text-white'
-                                    : 'text-dark-400 hover:text-white hover:bg-dark-700'
+                                ? 'bg-primary-600 text-white'
+                                : 'text-dark-400 hover:text-white hover:bg-dark-700'
                                 }`}
                         >
                             <tab.icon size={18} />
@@ -172,35 +188,45 @@ const AdminDashboard = () => {
                     ))}
                 </div>
 
-                {/* Tab Content */}
+                {/* Tab Content - Takes remaining height */}
                 {activeTab === 'issues' && (
-                    <div className="space-y-6">
-                        {/* Filters */}
-                        <IssueFilters
-                            params={params}
-                            onFilterChange={handleFilterChange}
-                            onReset={handleResetFilters}
-                        />
-
-                        {/* Issue Table */}
-                        {loading ? (
-                            <div className="flex justify-center py-12">
-                                <Loader size="lg" text="Loading issues..." />
-                            </div>
-                        ) : (
-                            <IssueTable
-                                issues={issues}
-                                pagination={pagination}
-                                onPageChange={handlePageChange}
-                                onStatusUpdate={handleStatusUpdate}
-                                onDelete={handleDelete}
+                    <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+                        {/* Left Sidebar - Filters (fixed width, no max-width) */}
+                        <aside className="w-full lg:w-[280px] flex-shrink-0 order-2 lg:order-1 lg:overflow-y-auto scrollbar-hide">
+                            <IssueFilters
+                                params={params}
+                                onFilterChange={handleFilterChange}
+                                onReset={handleResetFilters}
                             />
-                        )}
+                        </aside>
+
+                        {/* Right Content - Issue Table (scrollable with max-width) */}
+                        <div className="flex-1 min-w-0 order-1 lg:order-2 overflow-y-auto scrollbar-hide">
+                            <div className="max-w-7xl">
+                                {loading ? (
+                                    <div className="flex justify-center py-12">
+                                        <Loader size="lg" text="Loading issues..." />
+                                    </div>
+                                ) : (
+                                    <IssueTable
+                                        issues={issues}
+                                        pagination={pagination}
+                                        onPageChange={handlePageChange}
+                                        onStatusUpdate={handleStatusUpdate}
+                                        onDelete={handleDeleteClick}
+                                    />
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {activeTab === 'analytics' && (
-                    <AnalyticsWidgets data={analytics} />
+                    <div className="flex-1 overflow-y-auto scrollbar-hide w-full">
+                        <div className="max-w-7xl mx-auto w-full">
+                            <AnalyticsWidgets data={analytics} />
+                        </div>
+                    </div>
                 )}
             </main>
 
@@ -212,6 +238,42 @@ const AdminDashboard = () => {
                 onSubmit={handleSubmitStatus}
                 loading={updating}
             />
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                isOpen={deleteConfirmation.open}
+                onClose={() => setDeleteConfirmation({ open: false, issueId: null })}
+                title="Delete Issue"
+                size="sm"
+            >
+                <div className="flex flex-col items-center text-center p-2">
+                    <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-4">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Are you sure?</h3>
+                    <p className="text-dark-300 mb-8">
+                        This action cannot be undone. This will permanently delete the issue and remove all associated data.
+                    </p>
+                    <div className="flex gap-3 w-full">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setDeleteConfirmation({ open: false, issueId: null })}
+                            className="flex-1"
+                            disabled={deleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="danger"
+                            onClick={confirmDelete}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                            loading={deleting}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

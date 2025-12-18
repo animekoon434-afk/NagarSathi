@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Map, AlertCircle } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Plus, Map, AlertCircle, MapPin } from 'lucide-react';
 import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
@@ -9,12 +9,14 @@ import IssueFilters from '../components/issues/IssueFilters';
 import Button from '../components/common/Button';
 import { CardSkeletonList } from '../components/common/Loader';
 import { useIssues } from '../hooks/useIssues';
+import ActionAdSidebar from '../components/home/ActionAdSidebar';
 
 /**
  * Home Page Component
  * Main feed showing all issues
  */
 const Home = () => {
+    const location = useLocation();
     const {
         issues,
         loading,
@@ -25,15 +27,15 @@ const Home = () => {
         resetParams,
         goToPage,
         refetch,
-    } = useIssues({ limit: 10 });
+    } = useIssues(location.state?.filters || { limit: 10 });
 
     return (
-        <div className="min-h-screen bg-dark-900">
+        <div className="h-screen bg-dark-900 flex flex-col overflow-hidden">
             <Navbar />
 
-            <main className="container-custom py-8">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <main className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 lg:px-8 py-6">
+                {/* Header - Fixed at top */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 flex-shrink-0">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
                             Issue Feed
@@ -43,7 +45,7 @@ const Home = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link to="/map">
+                        <Link to="/map" state={{ filters: params }}>
                             <Button variant="secondary" icon={Map}>
                                 Map View
                             </Button>
@@ -61,10 +63,10 @@ const Home = () => {
                     </div>
                 </div>
 
-                {/* Main Content with Sidebar Layout */}
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left Sidebar - Filters */}
-                    <aside className="lg:w-72 flex-shrink-0">
+                {/* Main Content with Sidebar Layout - Takes remaining height */}
+                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+                    {/* Left Sidebar - Filters (fixed width, scrolls internally) */}
+                    <aside className="w-full lg:w-[280px] flex-shrink-0 order-2 lg:order-1 lg:overflow-y-auto scrollbar-hide">
                         <IssueFilters
                             params={params}
                             onFilterChange={updateParams}
@@ -72,8 +74,8 @@ const Home = () => {
                         />
                     </aside>
 
-                    {/* Right Content - Issue List */}
-                    <div className="flex-1">
+                    {/* Center Content - Issue List (scrollable feed) */}
+                    <div className="flex-1 min-w-0 order-1 lg:order-2 overflow-y-auto scrollbar-hide">
                         {loading ? (
                             <CardSkeletonList count={5} />
                         ) : error ? (
@@ -117,7 +119,7 @@ const Home = () => {
 
                                 {/* Pagination */}
                                 {pagination.pages > 1 && (
-                                    <div className="flex items-center justify-center gap-2 mt-10">
+                                    <div className="flex items-center justify-center gap-2 mt-10 pb-4">
                                         <Button
                                             variant="secondary"
                                             onClick={() => goToPage(pagination.page - 1)}
@@ -140,15 +142,15 @@ const Home = () => {
                             </>
                         )}
                     </div>
+
+                    {/* Right Sidebar - Action Ads (Desktop Only) */}
+                    <aside className="hidden xl:block w-[300px] flex-shrink-0 order-3 overflow-y-auto scrollbar-hide">
+                        <ActionAdSidebar />
+                    </aside>
                 </div>
             </main>
-
-            <Footer />
         </div>
     );
 };
-
-// Need to import MapPin for empty state
-import { MapPin } from 'lucide-react';
 
 export default Home;

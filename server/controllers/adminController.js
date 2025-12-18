@@ -155,7 +155,7 @@ export const getAnalytics = asyncHandler(async (req, res) => {
         { $sort: { count: -1 } },
     ]);
 
-    // Issues over time (last N days)
+    // Issues over time (last N days) with status breakdown
     const issuesOverTime = await Issue.aggregate([
         {
             $match: {
@@ -167,7 +167,16 @@ export const getAnalytics = asyncHandler(async (req, res) => {
                 _id: {
                     $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
                 },
-                count: { $sum: 1 },
+                total: { $sum: 1 },
+                reported: {
+                    $sum: { $cond: [{ $eq: ['$status', 'reported'] }, 1, 0] }
+                },
+                in_progress: {
+                    $sum: { $cond: [{ $eq: ['$status', 'in_progress'] }, 1, 0] }
+                },
+                resolved: {
+                    $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] }
+                },
             },
         },
         { $sort: { _id: 1 } },

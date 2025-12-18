@@ -90,6 +90,7 @@ export const userApi = {
 // Issue endpoints
 export const issueApi = {
     getIssues: (params) => api.get('/issues', { params }),
+    getFilterCounts: () => api.get('/issues/filter-counts'),
     getIssueById: (id) => api.get(`/issues/${id}`),
     getIssuesForMap: (params) => api.get('/issues/map', { params }),
     getMyIssues: (params) => api.get('/issues/user/my-issues', { params }),
@@ -131,6 +132,7 @@ export const adminApi = {
     getAnalytics: (params) => api.get('/admin/analytics', { params }),
     getAllUsers: (params) => api.get('/admin/users', { params }),
     updateUserRole: (id, role) => api.put(`/admin/users/${id}/role`, { role }),
+    deleteIssue: (id) => api.delete(`/issues/${id}`),
 };
 
 export default api;

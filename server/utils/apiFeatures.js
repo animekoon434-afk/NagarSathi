@@ -18,6 +18,15 @@ class APIFeatures {
         const excludedFields = ['page', 'sort', 'limit', 'fields', 'search', 'lat', 'lng', 'radius'];
         excludedFields.forEach((field) => delete queryObj[field]);
 
+        // Remove empty values (empty strings, null, undefined, empty arrays)
+        Object.keys(queryObj).forEach((key) => {
+            const value = queryObj[key];
+            if (value === '' || value === null || value === undefined ||
+                (Array.isArray(value) && value.length === 0)) {
+                delete queryObj[key];
+            }
+        });
+
         // Handle multi-select for state field (comma-separated values)
         if (queryObj.state && queryObj.state.includes(',')) {
             const states = queryObj.state.split(',').filter(Boolean);

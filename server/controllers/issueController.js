@@ -223,3 +223,60 @@ export const getIssuesForMap = asyncHandler(async (req, res) => {
         data: issues,
     });
 });
+
+// @desc    Get filter counts (issue counts per state, district, category, status)
+// @route   GET /api/issues/filter-counts
+// @access  Public
+export const getFilterCounts = asyncHandler(async (req, res) => {
+    // Get counts by state
+    const stateCounts = await Issue.aggregate([
+        { $match: { state: { $exists: true, $ne: '' } } },
+        { $group: { _id: '$state', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+    ]);
+
+    // Get counts by district
+    const districtCounts = await Issue.aggregate([
+        { $match: { district: { $exists: true, $ne: '' } } },
+        { $group: { _id: '$district', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+    ]);
+
+    // Get counts by category
+    const categoryCounts = await Issue.aggregate([
+        { $match: { category: { $exists: true, $ne: '' } } },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+    ]);
+
+    // Get counts by status
+    const statusCounts = await Issue.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+    ]);
+
+    // Convert arrays to objects for easier lookup
+    const counts = {
+        states: stateCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {}),
+        districts: districtCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {}),
+        categories: categoryCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {}),
+        statuses: statusCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {}),
+    };
+
+    res.status(200).json({
+        success: true,
+        data: counts,
+    });
+});

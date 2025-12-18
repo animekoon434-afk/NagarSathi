@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { List, Filter } from 'lucide-react';
 import Navbar from '../components/common/Navbar';
 import MapView from '../components/map/MapView';
 import Button from '../components/common/Button';
+import statesAndDistricts from '../utils/states-and-districts.json';
 
 /**
  * Map Page Component
@@ -11,7 +12,8 @@ import Button from '../components/common/Button';
  */
 const MapPage = () => {
     const navigate = useNavigate();
-    const [filters, setFilters] = useState({});
+    const location = useLocation();
+    const [filters, setFilters] = useState(location.state?.filters || {});
     const [showFilters, setShowFilters] = useState(false);
 
     const categories = [
@@ -32,12 +34,42 @@ const MapPage = () => {
         { value: 'resolved', label: 'Resolved' },
     ];
 
+    // Process states data
+    const states = useMemo(() => {
+        return statesAndDistricts?.states?.map(item => ({
+            value: item.state.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, ''),
+            label: item.state
+        })) || [];
+    }, []);
+
+    // Process districts data
+    const districtsData = useMemo(() => {
+        const districtMap = {};
+        statesAndDistricts?.states?.forEach(item => {
+            const stateValue = item.state.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '');
+            districtMap[stateValue] = item.districts.map(district => ({
+                value: district.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, ''),
+                label: district
+            }));
+        });
+        return districtMap;
+    }, []);
+
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
-        setFilters((prev) => ({
-            ...prev,
-            [name]: value || undefined,
-        }));
+        setFilters((prev) => {
+            const newFilters = {
+                ...prev,
+                [name]: value || undefined,
+            };
+
+            // Clear district if state changes
+            if (name === 'state') {
+                newFilters.district = undefined;
+            }
+
+            return newFilters;
+        });
     };
 
     const handleIssueClick = (issue) => {
@@ -52,7 +84,7 @@ const MapPage = () => {
             <div className="bg-dark-800 border-b border-dark-700 px-4 py-3">
                 <div className="container-custom flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Link to="/">
+                        <Link to="/" state={{ filters }}>
                             <Button variant="secondary" size="sm" icon={List}>
                                 List View
                             </Button>
@@ -74,6 +106,33 @@ const MapPage = () => {
                 {/* Filter Options */}
                 {showFilters && (
                     <div className="container-custom mt-3 flex flex-wrap gap-3 animate-slide-down">
+                        <select
+                            name="state"
+                            value={filters.state || ''}
+                            onChange={handleFilterChange}
+                            className="select-field w-auto min-w-[150px]"
+                        >
+                            <option value="">All States</option>
+                            {states.map((state) => (
+                                <option key={state.value} value={state.value}>
+                                    {state.label}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            name="district"
+                            value={filters.district || ''}
+                            onChange={handleFilterChange}
+                            className="select-field w-auto min-w-[150px]"
+                            disabled={!filters.state || !districtsData[filters.state]}
+                        >
+                            <option value="">All Districts</option>
+                            {filters.state && districtsData[filters.state]?.map((district) => (
+                                <option key={district.value} value={district.value}>
+                                    {district.label}
+                                </option>
+                            ))}
+                        </select>
                         <select
                             name="category"
                             value={filters.category || ''}
@@ -103,7 +162,7 @@ const MapPage = () => {
             </div>
 
             {/* Map */}
-            <div className="flex-1">
+            <div className="flex-1 min-h-0 relative">
                 <MapView
                     filters={filters}
                     onIssueClick={handleIssueClick}
